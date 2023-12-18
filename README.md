@@ -1,4 +1,4 @@
-![crates.io](https://img.shields.io/crates/v/serde-sibor.svg)
+[![crates.io](https://img.shields.io/crates/v/serde-sibor.svg)](https://crates.io/crates/serde-sibor)
 
 # `serde-sibor`
 #### `serde` implementation for the SIBOR binary format.
