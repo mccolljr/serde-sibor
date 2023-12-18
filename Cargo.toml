@@ -1,0 +1,16 @@
+[package]
+name = "sibor"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+[dependencies]
+thiserror = "1.0.51"
+serde = { version = "1.0.193", features = [] }
+
+
+[dev-dependencies]
+rand = "0.8.5"
+serde_bytes = "0.11.12"
+serde = { version = "1.0.193", features = ["derive"] }
+arbitrary = { version = "1.3.2", features = ["derive"] }
