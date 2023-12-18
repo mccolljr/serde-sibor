@@ -6,8 +6,7 @@ resolver = "2"
 description = "A serde implementation of the SIBOR binary format"
 readme = "README.md"
 repository = "https://github.com/mccolljr/serde-sibor"
-license = "Mozilla Public License 2.0"
-license-file = "LICENSE.md"
+license = "MPL-2.0"
 
 [dependencies]
 thiserror = "1.0.51"
