@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! # `serde` implementation for the SIBOR binary format.
 //!
 //! SIBOR is a binary format that is designed to be simple to implement, fast to encode and decode,
