@@ -12,7 +12,6 @@
 //! - SIBOR encodes all unsigned integers using a variable-length encoding.
 //! - SIBOR encodes all signed integers using a variable-length zigzag encoding.
 //! - SIBOR encodes all floats using a 64-bit IEEE 754 encoding. The bits are treated as a u64 and encoded using the variable-length encoding.
-//! - SIBOR does not check the length of strings or sequences before decoding them. This means that a maliciously-crafted SIBOR document could cause a denial-of-service attack.
 //!
 //! SIBOR is meant to be used when you want a quick and dirty way to serialize and deserialize binary data of a known schema.
 //! It does not have any built-in support for schema evolution, so such support must be implemented by the user.
