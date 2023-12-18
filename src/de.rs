@@ -1,5 +1,7 @@
 use crate::error::{Error, Result};
 
+/// A helper for deserializing statically structured data such as
+/// tuples, structs, and fixed-length arrays.
 struct DeserializeTuple<'a, R> {
     de: &'a mut Deserializer<R>,
 }
@@ -19,6 +21,7 @@ where
     }
 }
 
+/// A helper for deserializing the tag in tagged union values.
 struct DeserializeEnum<'a, R> {
     de: &'a mut Deserializer<R>,
 }
@@ -40,6 +43,7 @@ where
     }
 }
 
+/// A helper for deserializing a member of a tagged union.
 struct DeserializeEnumVariant<'a, R> {
     de: &'a mut Deserializer<R>,
 }
@@ -76,6 +80,7 @@ where
     }
 }
 
+/// A helper for deserializing elements of a dynamically sized collection.
 struct DeserializeCollection<'a, R> {
     remaining: usize,
     de: &'a mut Deserializer<R>,
@@ -100,11 +105,13 @@ where
     }
 }
 
+/// A deserializer that can deserialize owned values from a reader.
 pub struct Deserializer<R> {
     reader: R,
 }
 
 impl<R> Deserializer<R> {
+    /// Create a new deserializer from the given reader.
     pub fn new(reader: R) -> Self {
         Self { reader }
     }
@@ -114,18 +121,26 @@ impl<R> Deserializer<R>
 where
     R: ::std::io::Read,
 {
+    /// The maximum number of bytes that can be used to encode a variable-length integer.
+    /// Currently, this is 10 bytes and variable-length integers are limited to 64-bit values.
     const MAX_VARINT_BYTES: u64 = 10;
 
-    pub fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
+    /// A utility function to read exactly the number of bytes
+    /// necessary to fill the given buffer.
+    fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
         self.reader.read_exact(&mut buf[..]).map_err(Error::Io)
     }
 
+    /// Read an unsigned 8-bit integer from the stream.
+    /// This is a special case that consumes exactly one byte,
+    /// and does not use variable-length encoding.
     pub fn read_u8(&mut self) -> Result<u8> {
         let mut buf = [0u8];
         self.read_exact(&mut buf[..])?;
         Ok(buf[0])
     }
 
+    /// Read an unsigned 64-bit integer from the stream.
     pub fn read_uvarint(&mut self) -> Result<u64> {
         let mut v = 0u64;
         for i in 0u64..Self::MAX_VARINT_BYTES {
@@ -139,6 +154,8 @@ where
         Err(Error::Invalid("variable integer encoding".into()))
     }
 
+    /// Read a signed 64-bit integer from the stream.
+    /// All unsigned integers are encoded using variable-length encoding.
     pub fn read_ivarint(&mut self) -> Result<i64> {
         let unsigned = self.read_uvarint()?;
         let mut signed = (unsigned >> 1) as i64;
@@ -148,11 +165,16 @@ where
         Ok(signed)
     }
 
+    /// Read a 64-bit floating point number from the stream.
+    /// The raw bits are read as an unsigned integer and then converted to a float.
     pub fn read_float(&mut self) -> Result<f64> {
         let unsigned = self.read_uvarint()?;
         Ok(f64::from_bits(unsigned))
     }
 
+    /// Read a boolean value from the stream.
+    /// This is a special case that consumes exactly one byte, and expects
+    /// the value to be exactly `0` or `1`.
     pub fn read_bool(&mut self) -> Result<bool> {
         let b = self.read_u8()?;
         match b {
@@ -162,6 +184,9 @@ where
         }
     }
 
+    /// Read a sequence of bytes from the stream.
+    /// First, a variable-length integer is read. This is the length of the sequence.
+    /// Then, exactly that many bytes are read from the stream.
     pub fn read_bytes(&mut self, min: usize, max: usize) -> Result<Vec<u8>> {
         let len64 = self.read_uvarint()?;
         let len = usize::try_from(len64).map_err(|e| Error::Generic(e.to_string()))?;
@@ -173,6 +198,11 @@ where
         Ok(raw)
     }
 
+    /// Read a sequence of utf8-encoded bytes from the stream.
+    /// First, a variable-length integer is read. This is the length of the sequence.
+    /// Then, exactly that many bytes are read from the stream.
+    /// If the bytes are not valid utf8, an error is returned.
+    /// Otherwise, the bytes are converted to a String.
     pub fn read_string(&mut self, min: usize, max: usize) -> Result<String> {
         let raw = self.read_bytes(min, max)?;
         String::from_utf8(raw).map_err(|e| Error::Generic(e.to_string()))

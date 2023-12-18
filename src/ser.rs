@@ -1,5 +1,6 @@
 use crate::error::{Error, Result};
 
+/// A helper for serializing elements of a dynamically sized collection.
 pub struct CollectionSerializer<'a, W> {
     remaining: usize,
     ser: &'a mut Serializer<W>,
@@ -29,6 +30,8 @@ where
     }
 }
 
+/// A helper for serializing statically structured data such as
+/// tuples, structs, and fixed-length arrays.
 pub struct TupleSerializer<'a, W> {
     ser: &'a mut Serializer<W>,
 }
@@ -128,11 +131,13 @@ where
     }
 }
 
+/// A serializer that can serialize values to a writer.
 pub struct Serializer<W> {
     writer: W,
 }
 
 impl<W> Serializer<W> {
+    /// Create a new serializer that writes to the given writer.
     pub fn new(writer: W) -> Self {
         Self { writer }
     }
@@ -142,6 +147,7 @@ impl<W> Serializer<W>
 where
     W: ::std::io::Write,
 {
+    /// Get the zigzag encoding of a signed integer.
     pub fn zigzag(&self, v: i64) -> u64 {
         let mut unsigned = (v as u64) << 1;
         if v < 0 {
@@ -150,6 +156,7 @@ where
         unsigned
     }
 
+    /// Get the number of bytes required to encode an unsigned integer.
     pub fn sizeof_uvarint(&self, v: &u64) -> Result<usize> {
         let mut v = *v;
         let mut size = 1usize;
@@ -160,36 +167,46 @@ where
         Ok(size)
     }
 
+    /// Get the number of bytes required to encode a signed integer.
     pub fn sizeof_varint(&self, v: &i64) -> Result<usize> {
         let unsigned = self.zigzag(*v);
         self.sizeof_uvarint(&unsigned)
     }
 
+    /// Get the number of bytes required to encode a 64-bit floating point number.
     pub fn sizeof_float(&self, v: &f64) -> Result<usize> {
         return self.sizeof_uvarint(&v.to_bits());
     }
 
+    /// Get the number of bytes required to encode a boolean.
     pub fn sizeof_bool(&self, _: bool) -> Result<usize> {
         Ok(1)
     }
 
+    /// Get the number of bytes required to encode a string.
     pub fn sizeof_string(&self, v: &str) -> Result<usize> {
         self.sizeof_bytes(v.as_bytes())
     }
 
+    /// Get the number of bytes required to encode a byte array.
     pub fn sizeof_bytes(&self, v: &[u8]) -> Result<usize> {
         let len64 = u64::try_from(v.len()).map_err(|e| Error::Generic(e.to_string()))?;
         Self::combine_sizes([self.sizeof_uvarint(&len64)?, v.len()])
     }
 
-    pub fn write_exact(&mut self, buf: &[u8]) -> Result<()> {
+    /// A helper method for writing the full and exact contents of a buffer
+    /// to the underlying writer.
+    fn write_exact(&mut self, buf: &[u8]) -> Result<()> {
         self.writer.write_all(buf).map_err(Error::Io)
     }
 
+    /// Write a single byte to the byte stream.
+    /// This is a special case that does not use variable-length encoding.
     pub fn write_u8(&mut self, v: u8) -> Result<()> {
         self.write_exact(&[v])
     }
 
+    /// Write an unsigned 64-bit integer to the byte stream using variable-length encoding.
     pub fn write_uvarint(&mut self, mut v: u64) -> Result<()> {
         while v >= 0x80 {
             self.write_u8((v & 0x7f) as u8 | 0x80)?;
@@ -199,19 +216,26 @@ where
         Ok(())
     }
 
+    /// Write a signed 64-bit integer to the byte stream using variable-length zigzag encoding.
     pub fn write_ivarint(&mut self, v: i64) -> Result<()> {
         let unsigned = self.zigzag(v);
         self.write_uvarint(unsigned)
     }
 
+    /// Write a 64-bit floating point number to the byte stream.
+    /// The bits of the floating point number are written as an unsigned integer.
     pub fn write_float(&mut self, v: f64) -> Result<()> {
         self.write_uvarint(v.to_bits())
     }
 
+    /// Write a boolean to the byte stream.
     pub fn write_bool(&mut self, v: bool) -> Result<()> {
         self.write_u8(if v { 1 } else { 0 })
     }
 
+    /// Write a byte string to the byte stream.
+    /// First, the length us written as a variable-length unsigned integer.
+    /// Then, the contents of the byte string are written exactly as-is.
     pub fn write_bytes(&mut self, v: &[u8]) -> Result<()> {
         let len64 = u64::try_from(v.len()).map_err(|e| Error::Generic(e.to_string()))?;
         self.write_uvarint(len64)?;
@@ -219,6 +243,9 @@ where
         Ok(())
     }
 
+    /// Write a utf8-encoded string to the byte stream.
+    /// First, the length us written as a variable-length unsigned integer.
+    /// Then, the contents of the string are written exactly as-is.
     pub fn write_string(&mut self, v: &str) -> Result<()> {
         self.write_bytes(v.as_bytes())
     }
