@@ -3,10 +3,11 @@ name = "serde-sibor"
 version = "0.1.0"
 edition = "2021"
 resolver = "2"
-license = "Mozilla Public License 2.0"
 description = "A serde implementation of the SIBOR binary format"
 readme = "README.md"
 repository = "https://github.com/mccolljr/serde-sibor"
+license = "Mozilla Public License 2.0"
+license-file = "LICENSE.md"
 
 [dependencies]
 thiserror = "1.0.51"
